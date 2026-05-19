@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonic Family — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan: #00FFFF;
+  --cyan-dim: #00AACC;
+  --magenta: #FF00AA;
+  --dark: #030810;
+  --darker: #010508;
+  --panel: rgba(0,255,255,0.04);
+  --panel-border: rgba(0,255,255,0.15);
+  --text: #C8E8F0;
+  --text-dim: #5A7A88;
+  --red: #FF0033;
+  --yellow: #FFD700;
+  --green: #00FF88;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--darker);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  overflow-x: hidden;
+  cursor: crosshair;
+}
+
+/* ── BACKGROUND GRID ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,255,255,0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── SCAN LINE ── */
+.scanline {
+  position: fixed;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,255,0.3), transparent);
+  animation: scan 8s linear infinite;
+  z-index: 999;
+  pointer-events: none;
+}
+@keyframes scan { to { top: 110%; } }
+
+/* ── NOISE OVERLAY ── */
+.noise {
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── LANDING ── */
+#landing {
+  position: fixed;
+  inset: 0;
+  background: var(--darker);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s, visibility 0.8s;
+}
+#landing.hidden { opacity: 0; visibility: hidden; }
+
+.landing-glitch {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2rem, 8vw, 6rem);
+  font-weight: 900;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  position: relative;
+  animation: glitch 3s infinite;
+  text-shadow: 0 0 30px rgba(0,255,255,0.6), 0 0 80px rgba(0,255,255,0.2);
+}
+.landing-glitch::before,
+.landing-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: var(--darker);
+}
+.landing-glitch::before {
+  color: var(--magenta);
+  animation: glitch-1 3s infinite;
+  clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%);
+}
+.landing-glitch::after {
+  color: var(--cyan);
+  animation: glitch-2 3s infinite;
+  clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+}
+@keyframes glitch {
+  0%, 90%, 100% { transform: none; }
+  92% { transform: skew(-2deg); }
+  94% { transform: skew(2deg) translateX(4px); }
+  96% { transform: none; }
+}
+@keyframes glitch-1 {
+  0%, 90%, 100% { transform: none; opacity: 0; }
+  92% { transform: translateX(-4px); opacity: 0.8; }
+  94% { transform: translateX(4px); opacity: 0.8; }
+  96% { opacity: 0; }
+}
+@keyframes glitch-2 {
+  0%, 88%, 100% { transform: none; opacity: 0; }
+  90% { transform: translateX(4px); opacity: 0.6; }
+  92% { transform: translateX(-2px); opacity: 0.6; }
+  94% { opacity: 0; }
+}
+
+.landing-sub {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text-dim);
+  font-size: 1rem;
+  letter-spacing: 0.3em;
+  margin-top: 1rem;
+  animation: fadeIn 1s 0.5s both;
+}
+.landing-loading {
+  margin-top: 3rem;
+  width: 300px;
+  height: 2px;
+  background: rgba(0,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.landing-loading-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  width: 0%;
+  animation: load 2.5s ease-out 0.3s forwards;
+  box-shadow: 0 0 10px var(--cyan);
+}
+@keyframes load { to { width: 100%; } }
+
+.landing-status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--cyan-dim);
+  margin-top: 0.8rem;
+  letter-spacing: 0.1em;
+  animation: typing 2.5s steps(40) 0.3s both;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--cyan);
+}
+@keyframes typing { from { width: 0; } to { width: 100%; border-color: transparent; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+
+/* ── DISCORD LOGIN MODAL ── */
+#discord-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s, visibility 0.4s;
+  backdrop-filter: blur(8px);
+}
+#discord-modal.active { opacity: 1; visibility: visible; }
+
+.modal-box {
+  background: linear-gradient(135deg, #0a1520, #060e18);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 3rem;
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 0 60px rgba(0,255,255,0.1), inset 0 0 30px rgba(0,0,0,0.5);
+  animation: modalIn 0.4s ease;
+}
+@keyframes modalIn { from { transform: scale(0.9) translateY(20px); opacity: 0; } }
+
+.modal-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--cyan);
+  border-style: solid;
+}
+.modal-corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.modal-corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+.modal-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+.modal-corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+.modal-logo {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.modal-logo-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--cyan);
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 20px rgba(0,255,255,0.5);
+}
+.modal-logo-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+  margin-top: 0.3rem;
+}
+
+.modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.discord-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(88,101,242,0.2), rgba(88,101,242,0.1));
+  border: 1px solid rgba(88,101,242,0.5);
+  border-radius: 3px;
+  color: #fff;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.discord-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(88,101,242,0.3);
+  transform: translateX(-100%);
+  transition: transform 0.3s;
+}
+.discord-btn:hover::before { transform: translateX(0); }
+.discord-btn:hover { border-color: #5865F2; box-shadow: 0 0 20px rgba(88,101,242,0.4); }
+
+.discord-icon { width: 24px; height: 24px; }
+
+.invite-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.9rem;
+  background: linear-gradient(135deg, rgba(0,255,255,0.08), rgba(0,255,255,0.03));
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  color: var(--cyan);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+  margin-top: 1rem;
+}
+.invite-btn:hover { border-color: var(--cyan); background: rgba(0,255,255,0.12); box-shadow: 0 0 20px rgba(0,255,255,0.2); }
+
+/* ── HEADER ── */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 60px;
+  background: rgba(3,8,16,0.9);
+  border-bottom: 1px solid var(--panel-border);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  gap: 2rem;
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: var(--cyan);
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 15px rgba(0,255,255,0.5);
+  white-space: nowrap;
+}
+.logo span { color: var(--magenta); }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+nav {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+.nav-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+.nav-btn:hover, .nav-btn.active {
+  color: var(--cyan);
+  border-color: var(--panel-border);
+  background: var(--panel);
+}
+.nav-btn.cta {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,255,0.05);
+}
+.nav-btn.cta:hover { background: rgba(0,255,255,0.15); box-shadow: 0 0 15px rgba(0,255,255,0.2); }
+
+/* ── MAIN ── */
+main {
+  position: relative;
+  z-index: 2;
+  padding-top: 60px;
+}
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  position: relative;
+}
+
+.hero-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--cyan);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  padding: 0.4rem 1.2rem;
+  border: 1px solid rgba(0,255,255,0.3);
+  border-radius: 2px;
+  margin-bottom: 2rem;
+  background: rgba(0,255,255,0.03);
+  animation: fadeIn 0.6s 0.2s both;
+}
+
+.hero-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  animation: fadeIn 0.6s 0.4s both;
+}
+.hero-title .line1 {
+  display: block;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(255,255,255,0.1);
+}
+.hero-title .line2 {
+  display: block;
+  color: var(--cyan);
+  text-shadow: 0 0 40px rgba(0,255,255,0.4), 0 0 80px rgba(0,255,255,0.15);
+}
+.hero-title .line3 {
+  display: block;
+  font-size: 0.45em;
+  color: var(--text-dim);
+  letter-spacing: 0.5em;
+  margin-top: 0.8rem;
+  font-weight: 400;
+}
+
+.hero-desc {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  max-width: 560px;
+  line-height: 1.7;
+  font-weight: 300;
+  margin-bottom: 3rem;
+  animation: fadeIn 0.6s 0.6s both;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeIn 0.6s 0.8s both;
+}
+
+.btn-primary {
+  padding: 0.9rem 2.5rem;
+  background: linear-gradient(135deg, rgba(0,255,255,0.15), rgba(0,255,255,0.05));
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent);
+  transition: left 0.4s;
+}
+.btn-primary:hover::before { left: 100%; }
+.btn-primary:hover { background: rgba(0,255,255,0.2); box-shadow: 0 0 30px rgba(0,255,255,0.3); }
+
+.btn-secondary {
+  padding: 0.9rem 2.5rem;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.btn-secondary:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 4rem;
+  margin-top: 5rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--panel-border);
+  animation: fadeIn 0.6s 1s both;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+.stat-item { text-align: center; }
+.stat-value {
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 20px rgba(0,255,255,0.4);
+}
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+/* ── SECTIONS ── */
+.section {
+  padding: 6rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+.section-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--cyan);
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.section-title span { color: var(--cyan); }
+
+/* ── FEATURES GRID ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5px;
+  background: var(--panel-border);
+  border: 1px solid var(--panel-border);
+}
+.feature-card {
+  background: var(--dark);
+  padding: 2rem;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 0;
+  background: var(--cyan);
+  transition: height 0.3s;
+}
+.feature-card:hover::before { height: 100%; }
+.feature-card:hover { background: rgba(0,255,255,0.03); }
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+.feature-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+.feature-desc {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+/* ── COMMANDS LIST ── */
+.commands-section { background: rgba(0,255,255,0.01); border-top: 1px solid var(--panel-border); border-bottom: 1px solid var(--panel-border); }
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+.cmd-item {
+  padding: 0.6rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--cyan);
+  transition: all 0.2s;
+}
+.cmd-item:hover { background: rgba(0,255,255,0.08); border-color: var(--cyan); transform: translateX(4px); }
+.cmd-item span { color: var(--text-dim); font-size: 0.7rem; display: block; margin-top: 0.2rem; }
+
+/* ── DASHBOARD PREVIEW ── */
+.dashboard-preview {
+  background: linear-gradient(135deg, #060e18, #030810);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,255,255,0.08);
+}
+.dash-topbar {
+  background: rgba(0,255,255,0.04);
+  border-bottom: 1px solid var(--panel-border);
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.dash-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dash-dot.r { background: var(--red); }
+.dash-dot.y { background: var(--yellow); }
+.dash-dot.g { background: var(--green); }
+.dash-url {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  flex: 1;
+  text-align: center;
+}
+.dash-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 400px;
+}
+.dash-sidebar {
+  background: rgba(0,0,0,0.3);
+  border-right: 1px solid var(--panel-border);
+  padding: 1.5rem 1rem;
+}
+.dash-sidebar-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.dash-nav-item {
+  padding: 0.6rem 0.8rem;
+  border-radius: 2px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 0.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.dash-nav-item:hover, .dash-nav-item.active {
+  background: var(--panel);
+  color: var(--cyan);
+  border-left: 2px solid var(--cyan);
+}
+.dash-content { padding: 2rem; }
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.dash-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  padding: 1rem;
+  border-radius: 2px;
+}
+.dash-card-val {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+.dash-card-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.3rem; }
+.dash-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(0,255,255,0.05);
+}
+.dash-toggle-row:last-child { border: none; }
+.toggle-label { font-size: 0.85rem; font-weight: 500; }
+.toggle {
+  width: 40px;
+  height: 20px;
+  background: rgba(0,255,255,0.2);
+  border: 1px solid var(--cyan);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle.on { background: rgba(0,255,255,0.4); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle.on::after { transform: translateX(20px); background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--panel-border);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+.footer-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  color: var(--cyan);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+.footer-text {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--darker); }
+::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="scanline"></div>
+<div class="noise"></div>
+
+<!-- ══ LANDING ANIMATION ══ -->
+<div id="landing">
+  <div class="landing-glitch" data-text="SONIC FAMILY">SONIC FAMILY</div>
+  <div class="landing-sub">// COMMUNITY BOT SYSTEM //</div>
+  <div class="landing-loading"><div class="landing-loading-bar"></div></div>
+  <div class="landing-status">INITIALISATION DU SYSTÈME... CHARGEMENT DES MODULES...</div>
+</div>
+
+<!-- ══ DISCORD LOGIN MODAL ══ -->
+<div id="discord-modal">
+  <div class="modal-box">
+    <div class="modal-corner tl"></div>
+    <div class="modal-corner tr"></div>
+    <div class="modal-corner bl"></div>
+    <div class="modal-corner br"></div>
+    <div class="modal-logo">
+      <div class="modal-logo-title">SONIC FAMILY</div>
+      <div class="modal-logo-sub">// DASHBOARD ACCESS //</div>
+    </div>
+    <p class="modal-desc">Connecte-toi avec ton compte Discord pour accéder au dashboard et configurer ton serveur.</p>
+    <a href="https://discord.com/api/oauth2/authorize?client_id=1488927969316573276&redirect_uri=https%3A%2F%2Fyoursite.com%2Fcallback&response_type=code&scope=identify%20guilds" class="discord-btn">
+      <svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.032.054a19.908 19.908 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      Se connecter avec Discord
+    </a>
+    <a href="https://discord.com/oauth2/authorize?client_id=1488927969316573276&permissions=8&integration_type=0&scope=bot" class="invite-btn" target="_blank">
+      ⚡ Inviter le bot sur mon serveur
+    </a>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo">SONIC<span>.</span>FAMILY</div>
+  <div class="status-dot"></div>
+  <nav>
+    <button class="nav-btn active" onclick="scrollToSection('features')">Fonctionnalités</button>
+    <button class="nav-btn" onclick="scrollToSection('commands')">Commandes</button>
+    <button class="nav-btn" onclick="scrollToSection('dashboard')">Dashboard</button>
+    <button class="nav-btn cta" onclick="openModal()">Connexion</button>
+  </nav>
+</header>
+
+<!-- ══ MAIN ══ -->
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">// BOT DISCORD v1.0 — SYSTÈME ACTIF</div>
+    <h1 class="hero-title">
+      <span class="line1">SONIC</span>
+      <span class="line2">FAMILY</span>
+      <span class="line3">// COMMUNITY // SECURITY // UTILITY</span>
+    </h1>
+    <p class="hero-desc">Le bot de sécurité et d'utilité complet pour ton serveur Discord. Anti-raid, anti-spam, tickets, modération — tout ce qu'il te faut.</p>
+    <div class="hero-actions">
+      <a href="https://discord.com/oauth2/authorize?client_id=1488927969316573276&permissions=8&integration_type=0&scope=bot" class="btn-primary" target="_blank">⚡ Inviter le Bot</a>
+      <button class="btn-secondary" onclick="openModal()">Dashboard →</button>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-value" id="stat-servers">—</div>
+        <div class="stat-label">Serveurs Protégés</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">20+</div>
+        <div class="stat-label">Commandes Slash</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">24/7</div>
+        <div class="stat-label">Disponibilité</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-ping">—</div>
+        <div class="stat-label">Latence API</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="section">
+    <div class="section-header">
+      <div class="section-tag">// Modules Actifs</div>
+      <h2 class="section-title">TOUT CE DONT<br><span>TON SERVEUR A BESOIN</span></h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🛡️</span>
+        <div class="feature-name">Anti-Raid</div>
+        <p class="feature-desc">Détection automatique des raids en temps réel. Seuil de joins configurable, action kick ou ban automatique. Protection contre les vagues de bots.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🚫</span>
+        <div class="feature-name">Anti-Spam</div>
+        <p class="feature-desc">Surveillance des messages en temps réel. Timeout automatique des spammeurs, limite de messages configurable par fenêtre de 5 secondes.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔗</span>
+        <div class="feature-name">Anti-Liens</div>
+        <p class="feature-desc">Suppression automatique des liens et invitations Discord non autorisés. Whitelist personnalisable pour les liens approuvés.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🎫</span>
+        <div class="feature-name">Système de Tickets</div>
+        <p class="feature-desc">Panel de support avec bouton interactif, salons privés créés automatiquement, rôle support configurable, fermeture en un clic.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">👋</span>
+        <div class="feature-name">Bienvenue / Départ</div>
+        <p class="feature-desc">Messages de bienvenue et de départ totalement personnalisables avec variables dynamiques. Embed stylé avec avatar du membre.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🎭</span>
+        <div class="feature-name">Auto-Rôle</div>
+        <p class="feature-desc">Attribution automatique d'un rôle lors de l'arrivée d'un nouveau membre. Configuration en une seule commande.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⚠️</span>
+        <div class="feature-name">Système de Warns</div>
+        <p class="feature-desc">Avertissements persistants par serveur, historique complet avec date et raison, effacement des warns par les administrateurs.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📋</span>
+        <div class="feature-name">Logs Complets</div>
+        <p class="feature-desc">Canal de logs configurable pour les événements anti-raid, les actions de modération et les alertes de sécurité.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔧</span>
+        <div class="feature-name">Modération Complète</div>
+        <p class="feature-desc">Ban, kick, mute, purge, slowmode, lock/unlock de salons. Toutes les commandes essentielles de modération en slash commands.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMANDS -->
+  <section id="commands" class="commands-section">
+    <div class="section" style="padding-bottom:1rem;">
+      <div class="section-header">
+        <div class="section-tag">// Référence</div>
+        <h2 class="section-title">TOUTES LES <span>COMMANDES</span></h2>
+      </div>
+      <h3 style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--text-dim);letter-spacing:0.3em;margin-bottom:1rem;">⚙️ CONFIGURATION</h3>
+      <div class="cmd-grid" style="margin-bottom:2rem;">
+        <div class="cmd-item">/setup-welcome<span>Configure le message de bienvenue</span></div>
+        <div class="cmd-item">/setup-leave<span>Configure le message de départ</span></div>
+        <div class="cmd-item">/setup-logs<span>Définit le salon de logs</span></div>
+        <div class="cmd-item">/setup-autorole<span>Rôle automatique nouveaux membres</span></div>
+        <div class="cmd-item">/antiraid<span>Configure la protection raid</span></div>
+        <div class="cmd-item">/antispam<span>Active/configure l'anti-spam</span></div>
+        <div class="cmd-item">/antilink<span>Active/configure l'anti-liens</span></div>
+        <div class="cmd-item">/ticket-config<span>Catégorie et rôle support tickets</span></div>
+      </div>
+      <h3 style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--text-dim);letter-spacing:0.3em;margin-bottom:1rem;">🔨 MODÉRATION</h3>
+      <div class="cmd-grid" style="margin-bottom:2rem;">
+        <div class="cmd-item">/ban<span>Bannir un membre</span></div>
+        <div class="cmd-item">/kick<span>Expulser un membre</span></div>
+        <div class="cmd-item">/mute<span>Mettre en sourdine</span></div>
+        <div class="cmd-item">/unmute<span>Retirer le mute</span></div>
+        <div class="cmd-item">/warn<span>Avertir un membre</span></div>
+        <div class="cmd-item">/warns<span>Voir les avertissements</span></div>
+        <div class="cmd-item">/clearwarn<span>Effacer les warns</span></div>
+        <div class="cmd-item">/purge<span>Supprimer des messages</span></div>
+        <div class="cmd-item">/slowmode<span>Définir le slowmode</span></div>
+        <div class="cmd-item">/lock<span>Verrouiller un salon</span></div>
+        <div class="cmd-item">/unlock<span>Déverrouiller un salon</span></div>
+      </div>
+      <h3 style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--text-dim);letter-spacing:0.3em;margin-bottom:1rem;">🔧 UTILITAIRE</h3>
+      <div class="cmd-grid">
+        <div class="cmd-item">/ticket-panel<span>Envoie le panel tickets</span></div>
+        <div class="cmd-item">/userinfo<span>Infos sur un membre</span></div>
+        <div class="cmd-item">/serverinfo<span>Infos sur le serveur</span></div>
+        <div class="cmd-item">/avatar<span>Voir l'avatar d'un membre</span></div>
+        <div class="cmd-item">/ping<span>Latence du bot</span></div>
+        <div class="cmd-item">/help<span>Toutes les commandes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD PREVIEW -->
+  <section id="dashboard" class="section">
+    <div class="section-header">
+      <div class="section-tag">// Interface Web</div>
+      <h2 class="section-title">DASHBOARD <span>INTÉGRÉ</span></h2>
+    </div>
+    <div class="dashboard-preview">
+      <div class="dash-topbar">
+        <div class="dash-dot r"></div>
+        <div class="dash-dot y"></div>
+        <div class="dash-dot g"></div>
+        <div class="dash-url">sonic-family.bot/dashboard</div>
+      </div>
+      <div class="dash-body">
+        <div class="dash-sidebar">
+          <div class="dash-sidebar-title">Navigation</div>
+          <div class="dash-nav-item active">📊 Vue d'ensemble</div>
+          <div class="dash-nav-item">🛡️ Sécurité</div>
+          <div class="dash-nav-item">🎫 Tickets</div>
+          <div class="dash-nav-item">👋 Bienvenue</div>
+          <div class="dash-nav-item">🔨 Modération</div>
+          <div class="dash-nav-item">⚙️ Paramètres</div>
+        </div>
+        <div class="dash-content">
+          <div class="dash-cards">
+            <div class="dash-card">
+              <div class="dash-card-val">1,247</div>
+              <div class="dash-card-label">Membres</div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-card-val">23</div>
+              <div class="dash-card-label">Tickets Ouverts</div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-card-val" style="color:var(--green);">ACTIF</div>
+              <div class="dash-card-label">Statut Bot</div>
+            </div>
+          </div>
+          <div class="dash-toggle-row">
+            <span class="toggle-label">🛡️ Anti-Raid</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="dash-toggle-row">
+            <span class="toggle-label">🚫 Anti-Spam</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="dash-toggle-row">
+            <span class="toggle-label">🔗 Anti-Liens</span>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="dash-toggle-row">
+            <span class="toggle-label">👋 Message Bienvenue</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-logo">SONIC FAMILY</div>
+  <div class="footer-text">// COMMUNITY BOT — SYSTÈME DE SÉCURITÉ v1.0 //</div>
+</footer>
+
+<script>
+// Landing animation
+setTimeout(() => {
+  document.getElementById('landing').classList.add('hidden');
+}, 3200);
+
+// Show modal
+function openModal() {
+  document.getElementById('discord-modal').classList.add('active');
+}
+document.getElementById('discord-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('active');
+});
+
+// Scroll
+function scrollToSection(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Active nav
+window.addEventListener('scroll', () => {
+  const sections = ['features','commands','dashboard'];
+  const btns = document.querySelectorAll('.nav-btn');
+  let current = '';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 200) current = id;
+  });
+  btns.forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.textContent.toLowerCase().includes(current.slice(0,5))) btn.classList.add('active');
+  });
+});
+
+// Animate stats on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      animateCount(document.getElementById('stat-servers'), 0, 12, 1200);
+      animateCount(document.getElementById('stat-ping'), 0, 48, 1500, 'ms');
+    }
+  });
+}, { threshold: 0.5 });
+const statsBar = document.querySelector('.stats-bar');
+if (statsBar) observer.observe(statsBar);
+
+function animateCount(el, from, to, duration, suffix='') {
+  if (!el) return;
+  const start = performance.now();
+  function update(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const val = Math.floor(from + (to - from) * easeOut(progress));
+    el.textContent = val + suffix;
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+</script>
+</body>
+</html>
