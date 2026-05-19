@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonic Family — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan: #00FFFF;
+  --cyan-dim: #00AACC;
+  --magenta: #FF00AA;
+  --dark: #030810;
+  --darker: #010508;
+  --panel: rgba(0,255,255,0.04);
+  --panel-border: rgba(0,255,255,0.15);
+  --text: #C8E8F0;
+  --text-dim: #5A7A88;
+  --red: #FF0033;
+  --yellow: #FFD700;
+  --green: #00FF88;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--darker);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  overflow-x: hidden;
+  cursor: default;
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+.scanline {
+  position: fixed;
+  top: -100%; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent);
+  animation: scan 10s linear infinite;
+  z-index: 999;
+  pointer-events: none;
+}
+@keyframes scan { to { top: 110%; } }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 2rem; right: 2rem;
+  z-index: 9999;
+  background: linear-gradient(135deg, #060e18, #0a1520);
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 3px;
+  box-shadow: 0 0 20px rgba(0,255,136,0.2);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+  max-width: 320px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { border-color: var(--red); color: var(--red); box-shadow: 0 0 20px rgba(255,0,51,0.2); }
+.toast.warn { border-color: var(--yellow); color: var(--yellow); box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+
+/* ── HEADER ── */
+header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 56px;
+  background: rgba(3,8,16,0.95);
+  border-bottom: 1px solid var(--panel-border);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 1rem;
+}
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 1rem;
+  color: var(--cyan);
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 15px rgba(0,255,255,0.5);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.logo span { color: var(--magenta); }
+.header-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  border: 1px solid var(--panel-border);
+  padding: 0.2rem 0.6rem;
+  border-radius: 2px;
+  letter-spacing: 0.1em;
+}
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--green);
+}
+.status-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.header-back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  text-decoration: none;
+  border: 1px solid var(--panel-border);
+  padding: 0.3rem 0.8rem;
+  border-radius: 2px;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+.header-back:hover { color: var(--cyan); border-color: var(--cyan); background: var(--panel); }
+
+/* ── LAYOUT ── */
+.layout {
+  display: flex;
+  padding-top: 56px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: rgba(3,8,16,0.8);
+  border-right: 1px solid var(--panel-border);
+  position: fixed;
+  top: 56px;
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+  padding: 1.5rem 0.8rem;
+  z-index: 100;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--panel-border); }
+.sidebar-section-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 0 0.8rem;
+  margin: 1.2rem 0 0.5rem;
+}
+.sidebar-section-label:first-child { margin-top: 0; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 3px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  user-select: none;
+  width: 100%;
+  background: none;
+  text-align: left;
+  font-family: 'Rajdhani', sans-serif;
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--panel); color: var(--text); border-color: rgba(0,255,255,0.08); }
+.nav-item.active { background: rgba(0,255,255,0.07); color: var(--cyan); border-color: var(--panel-border); border-left: 2px solid var(--cyan); }
+.nav-item .nav-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-divider { height: 1px; background: var(--panel-border); margin: 0.8rem 0; }
+
+/* ── CONTENT ── */
+.content {
+  flex: 1;
+  margin-left: 220px;
+  padding: 2rem;
+  min-height: calc(100vh - 56px);
+}
+
+/* ── PAGE TITLE ── */
+.page-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+.page-subtitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  margin-bottom: 2rem;
+}
+
+/* ── PANELS ── */
+.panel {
+  background: linear-gradient(135deg, rgba(6,14,24,0.9), rgba(3,8,16,0.9));
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.panel-corner {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-color: var(--cyan-dim);
+  border-style: solid;
+}
+.panel-corner.tl { top:0;left:0;border-width:1px 0 0 1px }
+.panel-corner.tr { top:0;right:0;border-width:1px 1px 0 0 }
+.panel-corner.bl { bottom:0;left:0;border-width:0 0 1px 1px }
+.panel-corner.br { bottom:0;right:0;border-width:0 1px 1px 0 }
+.panel-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.panel-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--panel-border);
+}
+
+/* ── STATS GRID ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  padding: 1.2rem 1rem;
+  border-radius: 3px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.stat-card:hover { border-color: var(--cyan-dim); background: rgba(0,255,255,0.06); }
+.stat-card-val {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 15px rgba(0,255,255,0.3);
+}
+.stat-card-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.3rem; letter-spacing: 0.1em; }
+
+/* ── TOGGLE ROW ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid rgba(0,255,255,0.05);
+}
+.toggle-row:last-child { border: none; padding-bottom: 0; }
+.toggle-info { flex: 1; }
+.toggle-label { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.toggle-desc { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.1rem; font-weight: 300; }
+.toggle {
+  width: 44px; height: 22px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 11px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.25s;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+.toggle.on { background: rgba(0,255,255,0.2); border-color: var(--cyan); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  transition: all 0.25s;
+}
+.toggle.on::after { transform: translateX(22px); background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+/* ── INPUT / SELECT ── */
+.field-group {
+  margin-bottom: 1rem;
+}
+.field-label {
+  display: block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+.field-input, .field-select, .field-textarea {
+  width: 100%;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 3px;
+  transition: all 0.2s;
+  outline: none;
+  appearance: none;
+}
+.field-input:focus, .field-select:focus, .field-textarea:focus {
+  border-color: var(--cyan);
+  background: rgba(0,255,255,0.03);
+  box-shadow: 0 0 0 2px rgba(0,255,255,0.08);
+}
+.field-textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+.field-select option { background: #060e18; color: var(--text); }
+.field-hint { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.3rem; }
+
+/* ── GRID 2 COLS ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ── BUTTON ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  position: relative;
+  overflow: hidden;
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  transition: left 0.3s;
+}
+.btn:hover::before { left: 100%; }
+.btn-cyan { background: rgba(0,255,255,0.08); border-color: var(--cyan); color: var(--cyan); }
+.btn-cyan:hover { background: rgba(0,255,255,0.18); box-shadow: 0 0 15px rgba(0,255,255,0.2); }
+.btn-green { background: rgba(0,255,136,0.08); border-color: var(--green); color: var(--green); }
+.btn-green:hover { background: rgba(0,255,136,0.18); box-shadow: 0 0 15px rgba(0,255,136,0.2); }
+.btn-red { background: rgba(255,0,51,0.08); border-color: var(--red); color: var(--red); }
+.btn-red:hover { background: rgba(255,0,51,0.18); box-shadow: 0 0 15px rgba(255,0,51,0.2); }
+.btn-magenta { background: rgba(255,0,170,0.08); border-color: var(--magenta); color: var(--magenta); }
+.btn-magenta:hover { background: rgba(255,0,170,0.18); box-shadow: 0 0 15px rgba(255,0,170,0.2); }
+.btn-sm { padding: 0.4rem 0.9rem; font-size: 0.65rem; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled::before { display: none; }
+
+.btn-actions { display: flex; gap: 0.8rem; margin-top: 1.2rem; flex-wrap: wrap; }
+
+/* ── NUMBER INPUT ── */
+.number-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.number-row .field-input { width: 80px; text-align: center; }
+
+/* ── TAG BADGE ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+}
+.badge-green { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--green); }
+.badge-red { background: rgba(255,0,51,0.1); border: 1px solid rgba(255,0,51,0.3); color: var(--red); }
+.badge-yellow { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); color: var(--yellow); }
+.badge-cyan { background: rgba(0,255,255,0.1); border: 1px solid rgba(0,255,255,0.3); color: var(--cyan); }
+
+/* ── TABLE ── */
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.data-table th {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--panel-border);
+}
+.data-table td {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid rgba(0,255,255,0.04);
+  color: var(--text);
+  vertical-align: middle;
+}
+.data-table tr:hover td { background: rgba(0,255,255,0.02); }
+.data-table tr:last-child td { border: none; }
+
+/* ── WHITELIST TAGS ── */
+.whitelist-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+  min-height: 36px;
+  padding: 0.4rem;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+}
+.wl-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(0,255,255,0.08);
+  border: 1px solid rgba(0,255,255,0.2);
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+}
+.wl-tag button {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0;
+  line-height: 1;
+}
+.wl-tag button:hover { color: var(--red); }
+
+/* ── MESSAGE COMPOSER ── */
+.embed-preview {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--panel-border);
+  border-left: 4px solid var(--cyan);
+  border-radius: 3px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+.embed-preview-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 0.4rem;
+}
+.embed-preview-desc {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.embed-preview-footer {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 0.8rem;
+  font-family: 'Share Tech Mono', monospace;
+}
+.color-row { display: flex; gap: 1rem; align-items: center; }
+.color-picker { width: 44px; height: 34px; padding: 2px; background: rgba(0,0,0,0.4); border: 1px solid var(--panel-border); border-radius: 3px; cursor: pointer; }
+
+/* ── LOGS ── */
+.log-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 320px; overflow-y: auto; }
+.log-list::-webkit-scrollbar { width: 3px; }
+.log-list::-webkit-scrollbar-thumb { background: var(--panel-border); }
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.5rem 0.8rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+}
+.log-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+.log-icon { flex-shrink: 0; }
+.log-msg { color: var(--text); line-height: 1.4; }
+.log-entry.log-warn .log-msg { color: var(--yellow); }
+.log-entry.log-error .log-msg { color: var(--red); }
+.log-entry.log-success .log-msg { color: var(--green); }
+
+/* ── TABS ── */
+.tab-bar {
+  display: flex;
+  gap: 0.3rem;
+  border-bottom: 1px solid var(--panel-border);
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--text-dim);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  border-radius: 3px 3px 0 0;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--cyan); border-color: var(--panel-border); border-bottom-color: #010508; background: rgba(0,255,255,0.04); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── PAGE VIEWS ── */
+.page-view { display: none; }
+.page-view.active { display: block; }
+
+/* ── CHANNEL LIST ── */
+.channel-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.channel-item:hover { background: var(--panel); color: var(--text); }
+.channel-item.selected { background: rgba(0,255,255,0.07); color: var(--cyan); border-color: var(--panel-border); }
+.channel-hash { color: var(--text-dim); font-size: 0.9rem; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--darker); }
+::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="scanline"></div>
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <a href="index.html" class="logo">SONIC<span>.</span>FAMILY</a>
+  <span class="header-badge">DASHBOARD v1.0</span>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    <span id="bot-status-text">BOT EN LIGNE</span>
+  </div>
+  <a href="index.html" class="header-back">← Accueil</a>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section-label">Général</div>
+    <button class="nav-item active" onclick="showPage('overview')">
+      <span class="nav-icon">📊</span> Vue d'ensemble
+    </button>
+    <button class="nav-item" onclick="showPage('message')">
+      <span class="nav-icon">✉️</span> Envoyer Message
+    </button>
+    <button class="nav-item" onclick="showPage('logs')">
+      <span class="nav-icon">📋</span> Logs
+    </button>
+
+    <div class="sidebar-section-label">Sécurité</div>
+    <button class="nav-item" onclick="showPage('antiraid')">
+      <span class="nav-icon">🛡️</span> Anti-Raid
+    </button>
+    <button class="nav-item" onclick="showPage('antispam')">
+      <span class="nav-icon">🚫</span> Anti-Spam
+    </button>
+    <button class="nav-item" onclick="showPage('antilink')">
+      <span class="nav-icon">🔗</span> Anti-Liens
+    </button>
+
+    <div class="sidebar-section-label">Configuration</div>
+    <button class="nav-item" onclick="showPage('welcome')">
+      <span class="nav-icon">👋</span> Bienvenue
+    </button>
+    <button class="nav-item" onclick="showPage('tickets')">
+      <span class="nav-icon">🎫</span> Tickets
+    </button>
+    <button class="nav-item" onclick="showPage('autorole')">
+      <span class="nav-icon">🎭</span> Auto-Rôle
+    </button>
+    <button class="nav-item" onclick="showPage('moderation')">
+      <span class="nav-icon">🔨</span> Modération
+    </button>
+
+    <div class="nav-divider"></div>
+    <button class="nav-item" onclick="showPage('settings')">
+      <span class="nav-icon">⚙️</span> Paramètres
+    </button>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- ══ VUE D'ENSEMBLE ══ -->
+    <div class="page-view active" id="page-overview">
+      <div class="page-title">VUE D'ENSEMBLE</div>
+      <div class="page-subtitle">// TABLEAU DE BORD PRINCIPAL</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-val" id="ov-members">1 247</div>
+          <div class="stat-card-label">Membres</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val" id="ov-tickets">23</div>
+          <div class="stat-card-label">Tickets Ouverts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val" style="color:var(--green)">EN LIGNE</div>
+          <div class="stat-card-label">Statut Bot</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val" id="ov-ping">48ms</div>
+          <div class="stat-card-label">Latence API</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val" id="ov-warns">7</div>
+          <div class="stat-card-label">Warns Actifs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val" style="color:var(--red)">2</div>
+          <div class="stat-card-label">Alertes Raid</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">⚡ Modules Actifs</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">🛡️ Anti-Raid</div><div class="toggle-desc">Détection et blocage des raids automatiques</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Anti-Raid')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">🚫 Anti-Spam</div><div class="toggle-desc">Timeout automatique des spammeurs</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Anti-Spam')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">🔗 Anti-Liens</div><div class="toggle-desc">Suppression des liens non autorisés</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Anti-Liens')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">👋 Message Bienvenue</div><div class="toggle-desc">Accueille les nouveaux membres</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Bienvenue')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">🎫 Système Tickets</div><div class="toggle-desc">Panel de support avec salons privés</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Tickets')"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">📊 Activité Récente</div>
+        <div class="log-list" id="activity-log">
+          <div class="log-entry log-warn">
+            <span class="log-time">14:32</span>
+            <span class="log-icon">⚠️</span>
+            <span class="log-msg">Tentative de raid détectée — 5 joins en 3 secondes</span>
+          </div>
+          <div class="log-entry log-success">
+            <span class="log-time">14:28</span>
+            <span class="log-icon">✅</span>
+            <span class="log-msg">Nouveau ticket ouvert par ShadowUser#1234</span>
+          </div>
+          <div class="log-entry">
+            <span class="log-time">14:15</span>
+            <span class="log-icon">👋</span>
+            <span class="log-msg">NovaMember#5678 a rejoint le serveur</span>
+          </div>
+          <div class="log-entry log-error">
+            <span class="log-time">13:50</span>
+            <span class="log-icon">🔨</span>
+            <span class="log-msg">SpamBot#9999 — Timeout 10 min (Anti-Spam)</span>
+          </div>
+          <div class="log-entry log-success">
+            <span class="log-time">13:40</span>
+            <span class="log-icon">🛡️</span>
+            <span class="log-msg">Lien bloqué dans #général — RaidBot#0001</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ENVOYER MESSAGE ══ -->
+    <div class="page-view" id="page-message">
+      <div class="page-title">ENVOYER UN MESSAGE</div>
+      <div class="page-subtitle">// ENVOYER SUR TON SERVEUR DISCORD</div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this, 'tab-simple')">Message Simple</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-embed')">Embed</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-announce')">Annonce</button>
+      </div>
+
+      <!-- Simple -->
+      <div class="tab-content active" id="tab-simple">
+        <div class="panel">
+          <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+          <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+          <div class="panel-title">✉️ Message Simple</div>
+          <div class="field-group">
+            <label class="field-label">Salon de destination</label>
+            <select class="field-select" id="simple-channel">
+              <option value="">— Sélectionner un salon —</option>
+              <option value="general">#général</option>
+              <option value="annonces">#annonces</option>
+              <option value="staff">#staff</option>
+              <option value="bot-spam">#bot-spam</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Message</label>
+            <textarea class="field-textarea" id="simple-msg" placeholder="Ton message ici...&#10;&#10;Tu peux utiliser :&#10;{server} — nom du serveur&#10;{membercount} — nombre de membres"></textarea>
+          </div>
+          <div class="btn-actions">
+            <button class="btn btn-cyan" onclick="sendMessage('simple')">✉️ Envoyer</button>
+            <button class="btn btn-sm" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="clearMsg('simple')">Effacer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Embed -->
+      <div class="tab-content" id="tab-embed">
+        <div class="panel">
+          <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+          <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+          <div class="panel-title">🎨 Message Embed</div>
+          <div class="grid-2">
+            <div class="field-group">
+              <label class="field-label">Salon de destination</label>
+              <select class="field-select" id="embed-channel">
+                <option value="">— Sélectionner —</option>
+                <option value="general">#général</option>
+                <option value="annonces">#annonces</option>
+                <option value="staff">#staff</option>
+                <option value="bot-spam">#bot-spam</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Couleur de la barre</label>
+              <div class="color-row">
+                <input type="color" class="color-picker" id="embed-color" value="#00FFFF" oninput="updateEmbedPreview()">
+                <input type="text" class="field-input" id="embed-color-hex" value="#00FFFF" style="flex:1" oninput="syncColorFromHex()">
+              </div>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Titre de l'embed</label>
+            <input type="text" class="field-input" id="embed-title" placeholder="Titre" oninput="updateEmbedPreview()">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Description</label>
+            <textarea class="field-textarea" id="embed-desc" placeholder="Description de l'embed..." oninput="updateEmbedPreview()"></textarea>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Pied de page (optionnel)</label>
+            <input type="text" class="field-input" id="embed-footer" placeholder="Sonic Family Bot" oninput="updateEmbedPreview()">
+          </div>
+
+          <div class="field-label" style="margin-top:1rem">Aperçu</div>
+          <div class="embed-preview" id="embed-preview-box">
+            <div class="embed-preview-title" id="ep-title">Titre</div>
+            <div class="embed-preview-desc" id="ep-desc">Description...</div>
+            <div class="embed-preview-footer" id="ep-footer">Sonic Family Bot</div>
+          </div>
+          <div class="btn-actions">
+            <button class="btn btn-cyan" onclick="sendMessage('embed')">🚀 Envoyer l'Embed</button>
+            <button class="btn btn-sm" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="clearMsg('embed')">Effacer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annonce -->
+      <div class="tab-content" id="tab-announce">
+        <div class="panel">
+          <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+          <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+          <div class="panel-title">📢 Annonce</div>
+          <div class="field-group">
+            <label class="field-label">Salon d'annonce</label>
+            <select class="field-select" id="ann-channel">
+              <option value="">— Sélectionner —</option>
+              <option value="annonces">#annonces</option>
+              <option value="general">#général</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Titre de l'annonce</label>
+            <input type="text" class="field-input" id="ann-title" placeholder="🔔 Annonce Importante">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Contenu</label>
+            <textarea class="field-textarea" id="ann-content" placeholder="Contenu de l'annonce..." style="min-height:120px"></textarea>
+          </div>
+          <div class="toggle-row" style="border:none;padding:0.5rem 0">
+            <div class="toggle-info"><div class="toggle-label">Mentionner @everyone</div></div>
+            <div class="toggle" id="ann-mention-toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="btn-actions">
+            <button class="btn btn-magenta" onclick="sendMessage('announce')">📢 Publier l'Annonce</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ LOGS ══ -->
+    <div class="page-view" id="page-logs">
+      <div class="page-title">LOGS DU SERVEUR</div>
+      <div class="page-subtitle">// HISTORIQUE DES ÉVÉNEMENTS</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">📋 Configuration des Logs</div>
+        <div class="field-group">
+          <label class="field-label">Salon de logs</label>
+          <select class="field-select" id="logs-channel">
+            <option value="">— Non configuré —</option>
+            <option value="logs">#logs</option>
+            <option value="mod-logs">#mod-logs</option>
+            <option value="bot-logs">#bot-logs</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Logs Anti-Raid</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Logs Anti-Raid')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Logs Modération</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Logs Modération')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Logs Membres (join/leave)</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Logs Membres')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Logs Tickets</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Logs Tickets')"></div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Logs')">💾 Sauvegarder</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">📜 Historique Récent</div>
+        <div class="log-list" id="full-log">
+          <div class="log-entry log-warn">
+            <span class="log-time">14:32:05</span>
+            <span class="log-icon">⚠️</span>
+            <span class="log-msg">[ANTI-RAID] 5 joins en 3 secondes — Mode protection activé</span>
+          </div>
+          <div class="log-entry log-success">
+            <span class="log-time">14:28:14</span>
+            <span class="log-icon">🎫</span>
+            <span class="log-msg">[TICKET] Ouvert par ShadowUser#1234 dans #ticket-0023</span>
+          </div>
+          <div class="log-entry">
+            <span class="log-time">14:15:02</span>
+            <span class="log-icon">👋</span>
+            <span class="log-msg">[JOIN] NovaMember#5678 a rejoint (1 248 membres)</span>
+          </div>
+          <div class="log-entry log-error">
+            <span class="log-time">13:50:33</span>
+            <span class="log-icon">🚫</span>
+            <span class="log-msg">[ANTI-SPAM] SpamBot#9999 — Timeout 10 min</span>
+          </div>
+          <div class="log-entry log-success">
+            <span class="log-time">13:40:18</span>
+            <span class="log-icon">🔗</span>
+            <span class="log-msg">[ANTI-LIEN] Lien Discord supprimé — RaidBot#0001 dans #général</span>
+          </div>
+          <div class="log-entry">
+            <span class="log-time">13:20:45</span>
+            <span class="log-icon">🔨</span>
+            <span class="log-msg">[BAN] BadActor#0420 banni par Admin#0001 — Raid</span>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-sm" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="clearLogs()">🗑️ Effacer les logs</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ANTI-RAID ══ -->
+    <div class="page-view" id="page-antiraid">
+      <div class="page-title">ANTI-RAID</div>
+      <div class="page-subtitle">// PROTECTION CONTRE LES RAIDS</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🛡️ Configuration</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Activer l'Anti-Raid</div><div class="toggle-desc">Active la détection automatique des raids</div></div>
+          <div class="toggle on" id="antiraid-toggle" onclick="toggleSwitch(this, 'Anti-Raid')"></div>
+        </div>
+        <div style="margin-top:1.2rem">
+          <div class="field-group">
+            <label class="field-label">Seuil de joins (par fenêtre de temps)</label>
+            <div class="number-row">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('raid-threshold', -1)">−</button>
+              <input type="number" class="field-input" id="raid-threshold" value="5" min="2" max="50">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('raid-threshold', 1)">+</button>
+              <span style="color:var(--text-dim);font-size:.8rem;margin-left:.5rem">joins</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Fenêtre de détection (secondes)</label>
+            <div class="number-row">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('raid-window', -1)">−</button>
+              <input type="number" class="field-input" id="raid-window" value="10" min="3" max="60">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('raid-window', 1)">+</button>
+              <span style="color:var(--text-dim);font-size:.8rem;margin-left:.5rem">secondes</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Action automatique</label>
+            <select class="field-select" id="raid-action">
+              <option value="kick">Kick (expulsion)</option>
+              <option value="ban">Ban (bannissement)</option>
+              <option value="alert">Alerte uniquement</option>
+            </select>
+          </div>
+          <div class="toggle-row" style="border:none">
+            <div class="toggle-info"><div class="toggle-label">Alerter les admins</div><div class="toggle-desc">Envoie une alerte dans le salon de logs</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this, 'Alerte Admin Raid')"></div>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Anti-Raid')">💾 Sauvegarder</button>
+          <button class="btn btn-red btn-sm" onclick="showToast('⚠️ Mode lockdown activé !', 'warn')">🔒 Lockdown d'urgence</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ANTI-SPAM ══ -->
+    <div class="page-view" id="page-antispam">
+      <div class="page-title">ANTI-SPAM</div>
+      <div class="page-subtitle">// PROTECTION CONTRE LE SPAM</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🚫 Configuration</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Activer l'Anti-Spam</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Anti-Spam')"></div>
+        </div>
+        <div style="margin-top:1.2rem">
+          <div class="field-group">
+            <label class="field-label">Limite de messages</label>
+            <div class="number-row">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('spam-limit', -1)">−</button>
+              <input type="number" class="field-input" id="spam-limit" value="5" min="2" max="30">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('spam-limit', 1)">+</button>
+              <span style="color:var(--text-dim);font-size:.8rem;margin-left:.5rem">messages en 5s</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Durée du timeout</label>
+            <div class="number-row">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('spam-timeout', -1)">−</button>
+              <input type="number" class="field-input" id="spam-timeout" value="10" min="1" max="1440">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('spam-timeout', 1)">+</button>
+              <span style="color:var(--text-dim);font-size:.8rem;margin-left:.5rem">minutes</span>
+            </div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-label">Supprimer les messages spam</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this, 'Suppression Spam')"></div>
+          </div>
+          <div class="toggle-row" style="border:none">
+            <div class="toggle-info"><div class="toggle-label">Ignorer les bots</div><div class="toggle-desc">Les bots ne sont pas soumis à l'anti-spam</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this, 'Ignorer Bots')"></div>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Anti-Spam')">💾 Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ANTI-LIENS ══ -->
+    <div class="page-view" id="page-antilink">
+      <div class="page-title">ANTI-LIENS</div>
+      <div class="page-subtitle">// FILTRAGE DES LIENS ET INVITATIONS</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🔗 Configuration</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Activer l'Anti-Liens</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Anti-Liens')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Bloquer les invitations Discord</div><div class="toggle-desc">Supprime les liens discord.gg</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Blocage Invitations')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Bloquer tous les liens</div><div class="toggle-desc">http://, https://, etc.</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Blocage Liens')"></div>
+        </div>
+        <div class="toggle-row" style="border:none">
+          <div class="toggle-info"><div class="toggle-label">Warn automatique</div><div class="toggle-desc">Avertit le membre en plus de supprimer</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Warn Auto Liens')"></div>
+        </div>
+
+        <div style="margin-top:1.5rem">
+          <div class="panel-title">✅ Whitelist de Liens</div>
+          <div class="whitelist-tags" id="whitelist-container">
+            <div class="wl-tag">youtube.com<button onclick="removeTag(this)">×</button></div>
+            <div class="wl-tag">twitter.com<button onclick="removeTag(this)">×</button></div>
+          </div>
+          <div style="display:flex;gap:.5rem">
+            <input type="text" class="field-input" id="wl-input" placeholder="domaine.com" style="flex:1">
+            <button class="btn btn-green btn-sm" onclick="addWhitelistTag()">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Anti-Liens')">💾 Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BIENVENUE ══ -->
+    <div class="page-view" id="page-welcome">
+      <div class="page-title">BIENVENUE & DÉPART</div>
+      <div class="page-subtitle">// MESSAGES D'ACCUEIL ET DE DÉPART</div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this, 'tab-welcome-msg')">Message Bienvenue</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-leave-msg')">Message Départ</button>
+      </div>
+
+      <div class="tab-content active" id="tab-welcome-msg">
+        <div class="panel">
+          <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+          <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+          <div class="panel-title">👋 Message de Bienvenue</div>
+         <!-- Ligne 1111 -->
+<div class="toggle-row" style="border: none;">
+
+<!-- Ligne 1115 -->
+<div class="field-group" style="margin-top: 1rem;">
+            <label class="field-label">Salon de bienvenue</label>
+            <select class="field-select">
+              <option value="welcome">#bienvenue</option>
+              <option value="general">#général</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Message</label>
+            <textarea class="field-textarea" id="welcome-msg">Bienvenue sur le serveur, {user} ! 🎉&#10;&#10;Tu es notre {membercount}ème membre.&#10;Lis les règles dans #règles et amuse-toi bien !</textarea>
+          </div>
+          <div class="field-hint">Variables : {user} {username} {membercount} {server}</div>
+          <div class="btn-actions">
+            <button class="btn btn-cyan" onclick="saveSection('Message Bienvenue')">💾 Sauvegarder</button>
+            <button class="btn btn-sm" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="previewWelcome()">👁️ Aperçu</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-leave-msg">
+        <div class="panel">
+          <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+          <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+          <div class="panel-title">🚪 Message de Départ</div>
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-label">Activer</div></div>
+            <div class="toggle" onclick="toggleSwitch(this, 'Message Départ')"></div>
+          </div>
+          <div class="field-group" style="margin-top:1rem">
+            <label class="field-label">Salon de départ</label>
+            <select class="field-select">
+              <option value="general">#général</option>
+              <option value="logs">#logs</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Message</label>
+            <textarea class="field-textarea">{username} a quitté le serveur. 👋&#10;&#10;Il reste {membercount} membres.</textarea>
+          </div>
+          <div class="field-hint">Variables : {user} {username} {membercount} {server}</div>
+          <div class="btn-actions">
+            <button class="btn btn-cyan" onclick="saveSection('Message Départ')">💾 Sauvegarder</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TICKETS ══ -->
+    <div class="page-view" id="page-tickets">
+      <div class="page-title">SYSTÈME DE TICKETS</div>
+      <div class="page-subtitle">// SUPPORT ET ASSISTANCE</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🎫 Configuration</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Activer les Tickets</div></div>
+          <div class="toggle on" onclick="toggleSwitch(this, 'Tickets')"></div>
+        </div>
+        <div style="margin-top:1.2rem">
+          <div class="field-group">
+            <label class="field-label">Catégorie des tickets</label>
+            <select class="field-select">
+              <option value="">— Sélectionner une catégorie —</option>
+              <option value="support">📩 Support</option>
+              <option value="staff">🔒 Staff Privé</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Rôle support</label>
+            <select class="field-select">
+              <option value="">— Sélectionner un rôle —</option>
+              <option value="support">@Support</option>
+              <option value="mod">@Modérateur</option>
+              <option value="admin">@Administrateur</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Message du panel ticket</label>
+            <textarea class="field-textarea">Clique sur le bouton ci-dessous pour ouvrir un ticket de support. Notre équipe te répondra dans les plus brefs délais !</textarea>
+          </div>
+          <div class="toggle-row" style="border:none">
+            <div class="toggle-info"><div class="toggle-label">Log de fermeture</div><div class="toggle-desc">Enregistre l'historique à la fermeture</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this, 'Log Tickets')"></div>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Tickets')">💾 Sauvegarder</button>
+          <button class="btn btn-magenta btn-sm" onclick="sendTicketPanel()">📤 Envoyer le Panel</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">📊 Tickets Ouverts</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Auteur</th>
+              <th>Ouvert</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-table">
+            <tr>
+              <td><span style="font-family:monospace;color:var(--cyan)">#ticket-0023</span></td>
+              <td>ShadowUser#1234</td>
+              <td style="color:var(--text-dim)">14:28</td>
+              <td><span class="badge badge-yellow">En attente</span></td>
+              <td><button class="btn btn-sm btn-red" onclick="closeTicket(this, '0023')">Fermer</button></td>
+            </tr>
+            <tr>
+              <td><span style="font-family:monospace;color:var(--cyan)">#ticket-0022</span></td>
+              <td>NovaMember#5678</td>
+              <td style="color:var(--text-dim)">13:10</td>
+              <td><span class="badge badge-green">Traité</span></td>
+              <td><button class="btn btn-sm btn-red" onclick="closeTicket(this, '0022')">Fermer</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ AUTO-ROLE ══ -->
+    <div class="page-view" id="page-autorole">
+      <div class="page-title">AUTO-RÔLE</div>
+      <div class="page-subtitle">// ATTRIBUTION AUTOMATIQUE DE RÔLES</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🎭 Configuration</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Activer l'Auto-Rôle</div><div class="toggle-desc">Attribue un rôle aux nouveaux membres</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Auto-Rôle')"></div>
+        </div>
+        <div style="margin-top:1.2rem">
+          <div class="field-group">
+            <label class="field-label">Rôle à attribuer</label>
+            <select class="field-select">
+              <option value="">— Sélectionner un rôle —</option>
+              <option value="member">@Membre</option>
+              <option value="nouveau">@Nouveau</option>
+              <option value="verified">@Vérifié</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Délai avant attribution (secondes)</label>
+            <div class="number-row">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('autorole-delay', -5)">−</button>
+              <input type="number" class="field-input" id="autorole-delay" value="0" min="0" max="300">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('autorole-delay', 5)">+</button>
+              <span style="color:var(--text-dim);font-size:.8rem;margin-left:.5rem">secondes (0 = immédiat)</span>
+            </div>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Auto-Rôle')">💾 Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODÉRATION ══ -->
+    <div class="page-view" id="page-moderation">
+      <div class="page-title">MODÉRATION</div>
+      <div class="page-subtitle">// OUTILS DE MODÉRATION RAPIDE</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🔨 Action Rapide</div>
+        <div class="grid-2">
+          <div class="field-group">
+            <label class="field-label">Cible (ID ou @mention)</label>
+            <input type="text" class="field-input" id="mod-target" placeholder="123456789 ou @User">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Raison</label>
+            <input type="text" class="field-input" id="mod-reason" placeholder="Raison de l'action">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Durée mute (minutes)</label>
+          <div class="number-row">
+            <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('mod-duration', -5)">−</button>
+            <input type="number" class="field-input" id="mod-duration" value="10" min="1" max="1440">
+            <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('mod-duration', 5)">+</button>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-red" onclick="modAction('ban')">🔨 Ban</button>
+          <button class="btn btn-red btn-sm" onclick="modAction('kick')">👢 Kick</button>
+          <button class="btn btn-yellow btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="modAction('mute')">🔇 Mute</button>
+          <button class="btn btn-sm" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="modAction('warn')">⚠️ Warn</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">🗑️ Purge de Messages</div>
+        <div class="grid-2">
+          <div class="field-group">
+            <label class="field-label">Salon</label>
+            <select class="field-select" id="purge-channel">
+              <option value="general">#général</option>
+              <option value="bot-spam">#bot-spam</option>
+              <option value="annonces">#annonces</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Nombre de messages</label>
+            <div class="number-row">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('purge-count', -10)">−</button>
+              <input type="number" class="field-input" id="purge-count" value="10" min="1" max="100">
+              <button class="btn btn-sm" style="border-color:var(--panel-border);color:var(--text-dim)" onclick="adjustNum('purge-count', 10)">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-red" onclick="purgeMessages()">🗑️ Purger</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PARAMÈTRES ══ -->
+    <div class="page-view" id="page-settings">
+      <div class="page-title">PARAMÈTRES</div>
+      <div class="page-subtitle">// CONFIGURATION GÉNÉRALE</div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">⚙️ Général</div>
+        <div class="field-group">
+          <label class="field-label">Préfixe de commande</label>
+          <input type="text" class="field-input" value="/" style="max-width:120px">
+          <div class="field-hint">Les slash commands sont recommandées (/)</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Langue du bot</label>
+          <select class="field-select" style="max-width:200px">
+            <option value="fr">🇫🇷 Français</option>
+            <option value="en">🇬🇧 English</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="toggle-label">Mode debug</div><div class="toggle-desc">Affiche des informations supplémentaires dans les logs</div></div>
+          <div class="toggle" onclick="toggleSwitch(this, 'Debug')"></div>
+        </div>
+        <div class="btn-actions">
+          <button class="btn btn-cyan" onclick="saveSection('Paramètres')">💾 Sauvegarder</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-corner tl"></div><div class="panel-corner tr"></div>
+        <div class="panel-corner bl"></div><div class="panel-corner br"></div>
+        <div class="panel-title">⚠️ Zone Dangereuse</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap">
+          <button class="btn btn-red" onclick="confirmReset()">🔄 Réinitialiser la config</button>
+          <button class="btn btn-sm" style="border-color:var(--text-dim);color:var(--text-dim)" onclick="exportConfig()">📤 Exporter la config</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ══ NAVIGATION ══
+function showPage(id) {
+  document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  // Find and activate matching nav item
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) {
+      n.classList.add('active');
+    }
+  });
+}
+
+// ══ TABS ══
+function switchTab(btn, tabId) {
+  const panel = btn.closest('.tab-bar').parentElement;
+  panel.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  panel.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = document.getElementById(tabId);
+  if (tab) tab.classList.add('active');
+}
+
+// ══ TOAST ══
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type === 'error' ? 'error' : type === 'warn' ? 'warn' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ══ TOGGLE ══
+function toggleSwitch(el, name) {
+  el.classList.toggle('on');
+  const state = el.classList.contains('on') ? 'activé' : 'désactivé';
+  showToast(`✅ ${name} ${state}`);
+}
+
+// ══ ADJUST NUMBERS ══
+function adjustNum(id, delta) {
+  const input = document.getElementById(id);
+  if (!input) return;
+  let val = parseInt(input.value) + delta;
+  if (input.min) val = Math.max(parseInt(input.min), val);
+  if (input.max) val = Math.min(parseInt(input.max), val);
+  input.value = val;
+}
+
+// ══ SAVE ══
+function saveSection(name) {
+  showToast(`💾 ${name} sauvegardé !`);
+}
+
+// ══ EMBED PREVIEW ══
+function updateEmbedPreview() {
+  const title = document.getElementById('embed-title')?.value || 'Titre';
+  const desc = document.getElementById('embed-desc')?.value || 'Description...';
+  const footer = document.getElementById('embed-footer')?.value || 'Sonic Family Bot';
+  const color = document.getElementById('embed-color')?.value || '#00FFFF';
+  document.getElementById('ep-title').textContent = title;
+  document.getElementById('ep-desc').textContent = desc;
+  document.getElementById('ep-footer').textContent = footer;
+  document.getElementById('embed-preview-box').style.borderLeftColor = color;
+  if (document.getElementById('embed-color-hex')) {
+    document.getElementById('embed-color-hex').value = color;
+  }
+}
+function syncColorFromHex() {
+  const hex = document.getElementById('embed-color-hex')?.value;
+  if (hex && /^#[0-9A-Fa-f]{6}$/.test(hex)) {
+    document.getElementById('embed-color').value = hex;
+    updateEmbedPreview();
+  }
+}
+
+// ══ SEND MESSAGE ══
+function sendMessage(type) {
+  let channel, valid = true;
+  if (type === 'simple') {
+    channel = document.getElementById('simple-channel')?.value;
+    const msg = document.getElementById('simple-msg')?.value;
+    if (!channel) { showToast('❌ Sélectionne un salon', 'error'); return; }
+    if (!msg?.trim()) { showToast('❌ Le message est vide', 'error'); return; }
+    showToast(`✅ Message envoyé dans #${channel}`);
+  } else if (type === 'embed') {
+    channel = document.getElementById('embed-channel')?.value;
+    const title = document.getElementById('embed-title')?.value;
+    if (!channel) { showToast('❌ Sélectionne un salon', 'error'); return; }
+    if (!title?.trim()) { showToast('❌ Ajoute un titre à l\'embed', 'error'); return; }
+    showToast(`✅ Embed envoyé dans #${channel}`);
+  } else if (type === 'announce') {
+    channel = document.getElementById('ann-channel')?.value;
+    const content = document.getElementById('ann-content')?.value;
+    if (!channel) { showToast('❌ Sélectionne un salon', 'error'); return; }
+    if (!content?.trim()) { showToast('❌ Le contenu est vide', 'error'); return; }
+    const mention = document.getElementById('ann-mention-toggle')?.classList.contains('on');
+    showToast(`📢 Annonce publiée dans #${channel}${mention ? ' (@everyone)' : ''}`);
+    addLog('success', '📢', `Annonce publiée dans #${channel}`);
+  }
+}
+
+function clearMsg(type) {
+  if (type === 'simple') {
+    document.getElementById('simple-msg').value = '';
+  } else if (type === 'embed') {
+    ['embed-title','embed-desc','embed-footer'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    updateEmbedPreview();
+  }
+}
+
+// ══ WHITELIST ══
+function addWhitelistTag() {
+  const input = document.getElementById('wl-input');
+  const val = input?.value?.trim();
+  if (!val) return;
+  const container = document.getElementById('whitelist-container');
+  const tag = document.createElement('div');
+  tag.className = 'wl-tag';
+  tag.innerHTML = `${val}<button onclick="removeTag(this)">×</button>`;
+  container.appendChild(tag);
+  input.value = '';
+  showToast(`✅ ${val} ajouté à la whitelist`);
+}
+function removeTag(btn) {
+  const tag = btn.parentElement;
+  const name = tag.textContent.slice(0, -1);
+  tag.remove();
+  showToast(`🗑️ ${name.trim()} supprimé`);
+}
+document.getElementById('wl-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') addWhitelistTag();
+});
+
+// ══ TICKETS ══
+function closeTicket(btn, id) {
+  const row = btn.closest('tr');
+  row.cells[3].innerHTML = '<span class="badge badge-red">Fermé</span>';
+  btn.disabled = true;
+  btn.textContent = 'Fermé';
+  showToast(`🎫 Ticket #${id} fermé`);
+  addLog('success', '🎫', `Ticket #ticket-${id} fermé`);
+}
+function sendTicketPanel() {
+  showToast('📤 Panel ticket envoyé dans le salon configuré');
+  addLog('success', '📤', 'Panel ticket envoyé');
+}
+
+// ══ MODÉRATION ══
+function modAction(action) {
+  const target = document.getElementById('mod-target')?.value?.trim();
+  const reason = document.getElementById('mod-reason')?.value?.trim() || 'Aucune raison';
+  if (!target) { showToast('❌ Spécifie une cible', 'error'); return; }
+  const labels = { ban: '🔨 Ban', kick: '👢 Kick', mute: '🔇 Mute', warn: '⚠️ Warn' };
+  showToast(`${labels[action]} appliqué à ${target} — ${reason}`);
+  addLog('warn', labels[action], `${action.toUpperCase()} de ${target} : ${reason}`);
+}
+
+function purgeMessages() {
+  const count = document.getElementById('purge-count')?.value;
+  const channel = document.getElementById('purge-channel')?.value;
+  showToast(`🗑️ ${count} messages supprimés dans #${channel}`);
+  addLog('warn', '🗑️', `Purge de ${count} messages dans #${channel}`);
+}
+
+// ══ WELCOME PREVIEW ══
+function previewWelcome() {
+  const msg = document.getElementById('welcome-msg')?.value || '';
+  const preview = msg
+    .replace(/{user}/g, '@NouveauMembre#1234')
+    .replace(/{username}/g, 'NouveauMembre')
+    .replace(/{membercount}/g, '1248')
+    .replace(/{server}/g, 'Sonic Family');
+  showToast('👁️ ' + preview.substring(0, 80) + (preview.length > 80 ? '...' : ''));
+}
+
+// ══ SETTINGS ══
+function confirmReset() {
+  if (confirm('⚠️ Réinitialiser toute la configuration ? Cette action est irréversible.')) {
+    showToast('🔄 Configuration réinitialisée', 'warn');
+  }
+}
+function exportConfig() {
+  const config = {
+    antiraid: { enabled: true, threshold: 5, window: 10, action: 'kick' },
+    antispam: { enabled: true, limit: 5, timeout: 10 },
+    antilink: { enabled: false, blockInvites: true },
+    welcome: { enabled: true },
+    tickets: { enabled: true },
+    autorole: { enabled: false }
+  };
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sonic-family-config.json';
+  a.click();
+  showToast('📤 Configuration exportée');
+}
+
+// ══ LOGS ══
+function addLog(type, icon, msg) {
+  const now = new Date();
+  const time = now.toTimeString().slice(0, 8);
+  const logEl = document.createElement('div');
+  logEl.className = `log-entry log-${type}`;
+  logEl.innerHTML = `<span class="log-time">${time}</span><span class="log-icon">${icon}</span><span class="log-msg">${msg}</span>`;
+  const lists = document.querySelectorAll('#activity-log, #full-log');
+  lists.forEach(list => {
+    list.insertBefore(logEl.cloneNode(true), list.firstChild);
+  });
+}
+function clearLogs() {
+  ['activity-log','full-log'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="log-entry"><span class="log-time">—</span><span class="log-icon">🗑️</span><span class="log-msg">Logs effacés</span></div>';
+  });
+  showToast('🗑️ Logs effacés');
+}
+
+// ══ PING SIMULATION ══
+function updatePing() {
+  const ping = Math.floor(Math.random() * 30 + 35);
+  const el = document.getElementById('ov-ping');
+  if (el) el.textContent = ping + 'ms';
+}
+setInterval(updatePing, 5000);
+
+// ══ INIT ══
+document.addEventListener('DOMContentLoaded', () => {
+  updateEmbedPreview();
+});
+</script>
+</body>
+</html>
